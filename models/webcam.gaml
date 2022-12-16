@@ -43,7 +43,7 @@ global {
 	bool save_image <- false parameter: true;
 
 	
-	list<point> distorsion_points <- [{485.80572509765625,16.748991012573242,0.0},{1526.3643798828125,70.27054595947266,0.0},{1407.31103515625,1054.187255859375,0.0},{468.1149597167969,997.7169799804688,0.0}];
+	list<point> distorsion_points <- [{487.9398496240601,92.40641711229948,0.0},{1426.2857142857142,63.529411764705884,0.0},{1504.2406015037593,1056.8983957219252,0.0},{453.29323308270676,1068.4491978609626,0.0}];
 	list<point> bounds_points <- [{668.4972170686457,466.4175824175824,0.0},{736.1781076066791,525.7582417582418,0.0}];
 	list<point> blacksubblock_points <-[{537.8849721706865,469.978021978022,0.0},{569.9443413729128,497.2747252747253,0.0}];
 	list<point> whitesubblock_points <-[{699.3692022263451,331.1208791208791,0.0},{731.4285714285714,360.7912087912088,0.0}];
@@ -59,10 +59,10 @@ global {
 	
 	init {
 		//1 = white;  0 = black
-		patterns << create_pattern("Empty building", 0,1,0,1);
-		patterns << create_pattern("House", 0,0,0,0);
-		patterns << create_pattern("Office", 1,1,1,1);
-//		patterns << create_pattern("Office", 0,1,1,0);
+		patterns << create_pattern("Empty building", 0,0,0,0);
+		patterns << create_pattern("House", 1,1,1,1);
+		patterns << create_pattern("Office", 1,0,0,1);
+		patterns << create_pattern("Office", 0,1,1,0);
 	
 		
 		point pt0 <- distorsion_points[0];
@@ -74,6 +74,7 @@ global {
 		do create_agents;
 	
 	}
+	
 	
 	action create_agents;
 	
@@ -202,43 +203,107 @@ global {
 			} 
 		}
 
+				
+		
 		loop j from: 0 to: 63{
-			write 'j = ' + j;
-			if (blocks[j].type = nil  or blocks[j].type.id = nil){
-				continue;				
-			}
+			if (blocks[j].type = nil  or blocks[j].type.id = nil){continue;}
 
 			int x <- j/8;
 			int y <- j mod 8;
-			switch blocks[j].type.id{
-				match 'House'{
-						create house{
+			
+			if blocks[j].type.id = 'House'{
+				if(house overlapping environment[x,y] != []){
+					continue;
+				}
+				if (house overlapping environment[x,y] = [] and office overlapping environment[x,y] = [] and empty_building overlapping environment[x,y] = []){
+					create house{
 						shape <- environment[x,y].shape;
 						location <- (environment[x,y].shape).location;
-						color <- colors['House']; 
-//						create inhabitant number: 2{
-//							location <- environment[x,y].location;
-//							house_location <- location;
-//							office_location <- not empty(available_office) ? any_location_in(one_of(available_office)) : nil;
-//						}	
-						}
-				}
-				match 'Office'{
-						create office{
-							shape <- environment[x,y].shape;
-							location <- environment[x,y].location;
-							color <- colors['Office']; 
-						}
-				
-				}
-				match 'Empty building'{
-					create empty_building{
-						location <- environment[x,y].location;
-						shape <- environment[x,y].shape;
-						color <- colors['Empty building']; 
+						color <- colors['House']; 	
 					}
 				}
+				else{	
+					if(office overlapping environment[x,y] != []){
+						ask office overlapping environment[x,y]{do die;}
+						create house{
+							shape <- environment[x,y].shape;
+							location <- (environment[x,y].shape).location;
+							color <- colors['House']; 	
+						}
+					}
+					if(empty_building overlapping environment[x,y] != []){
+						ask empty_building overlapping environment[x,y]{do die;}
+						create house{
+							shape <- environment[x,y].shape;
+							location <- (environment[x,y].shape).location;
+							color <- colors['House']; 	
+						}
+					}	
+				}
 			}
+			
+//			if blocks[j].type.id = 'Office'{
+//				write 'Office detected at environment[' + x + ',' + y + ']';
+//				if(office overlapping environment[x,y] != []){
+//					continue;
+//				}
+//				if (house overlapping environment[x,y] = [] and office overlapping environment[x,y] = [] and empty_building overlapping environment[x,y] = []){
+//					create office{
+//						shape <- environment[x,y].shape;
+//						location <- (environment[x,y].shape).location;
+//						color <- colors['Office']; 	
+//					}
+//				}
+//				else{	
+//					if(house overlapping environment[x,y] != []){
+//						ask house overlapping environment[x,y]{do die;}
+//						create office{
+//							shape <- environment[x,y].shape;
+//							location <- (environment[x,y].shape).location;
+//							color <- colors['Office']; 	
+//						}
+//					}
+//					if(empty_building overlapping environment[x,y] != []){
+//						ask empty_building overlapping environment[x,y]{do die;}
+//						create office{
+//							shape <- environment[x,y].shape;
+//							location <- (environment[x,y].shape).location;
+//							color <- colors['Office']; 	
+//						}
+//					}	
+//				}
+//			}
+
+//			if blocks[j].type.id = 'Empty environment'{
+//				if(empty_building overlapping environment[x,y] != []){
+//					break;
+//				}
+//				else if (house overlapping environment[x,y] = [] and office overlapping environment[x,y] = [] and empty_building overlapping environment[x,y] = []){
+//					create empty_building{
+//						shape <- environment[x,y].shape;
+//						location <- (environment[x,y].shape).location;
+//						color <- colors['Empty building']; 	
+//					}
+//				}
+//				else{	
+//					if(office overlapping environment[x,y] != []){
+//						ask office overlapping environment[x,y]{do die;}
+//						create empty_building{
+//							shape <- environment[x,y].shape;
+//							location <- (environment[x,y].shape).location;
+//							color <- colors['Empty building']; 	
+//						}
+//					}
+//					if(house overlapping environment[x,y] != []){
+//						ask house overlapping environment[x,y]{do die;}
+//						create empty_building{
+//							shape <- environment[x,y].shape;
+//							location <- (environment[x,y].shape).location;
+//							color <- colors['Empty building']; 	
+//						}
+//					}	
+//				}
+//			}
 			x <- nil;
 			y <- nil;	
 		}
@@ -266,8 +331,7 @@ global {
 		let c <- cam_shot("tmp.jpg", image_width, image_height, webcam1);
 		do define_code;
 	}
-	
-	
+
 }
 
 species cell 
