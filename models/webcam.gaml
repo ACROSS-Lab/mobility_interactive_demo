@@ -14,10 +14,7 @@ global {
 	webcam webcam1 <- webcam(1);
 	int image_width <- 480;
 	int image_height <- 270; 
-	list<environment> houses <- [];
-	list<environment> offices <- [];
-	list<empty_building> empty_buildings <- [];
-	map<string,rgb> colors <- ["Empty building":: #blue, "House":: #yellow, "Office" :: #orange];
+	map<string,rgb> colors <- ["Empty building":: #lightgray, "House":: #yellow, "Office" :: #orange];
 	image_file image_file_test <- image_file("../includes/images.jpg");
 
 
@@ -64,7 +61,6 @@ global {
 		patterns << create_pattern("Office", 1,0,0,1);
 		patterns << create_pattern("Office", 0,1,1,0);
 	
-		
 		point pt0 <- distorsion_points[0];
 		point pt1 <- distorsion_points[2];
 		
@@ -158,8 +154,7 @@ global {
 				if (length(bounds_points) = 2) {
 					write sample(bounds_points);
 				} 
-			} 
-			
+			} 	
 		}
 	}
 	
@@ -168,6 +163,11 @@ global {
 			shape <- environment[x,y].shape - 2;
 			location <- (environment[x,y].shape).location;
 			color <- colors['House']; 	
+			create inhabitant number: 10{
+				location <- any_location_in(environment[x,y].shape);
+				house_location <- location;
+				office_location <- not empty(available_office) ? any_location_in(one_of(available_office)) : nil;
+			}				
 		}
 	}
 	
@@ -187,8 +187,19 @@ global {
 		}
 	}
 	
+	//kill house & inhabitant belong to the house
+	action kill_house_inhabitant(int x, int y){
+		ask house overlapping environment[x,y]{
+			loop i over: inhabitant{
+				if (environment[x,y] overlaps i.house_location){
+					ask i{do die;}	
+				}				
+			}
+			do die;
+		}
+	}
+	
 	action define_code {
-		write length(house);
 		current_mode <- "Detection of the codes of the blocks";
 		write "Detection of the codes of the blocks";
 		blocks_detected <- [];
@@ -227,14 +238,19 @@ global {
 			} 
 		}
 		
-		int count_loop <- 0;
 		loop j from: 0 to: 63{
-			if (blocks[j].type = nil or blocks[j].type.id = nil){
-				write "unable to detect type of " + blocks[j];
-				continue;
-			}
 			int x <- j/8;
 			int y <- j mod 8;
+			
+			if (blocks[j].type = nil or blocks[j].type.id = nil){
+				if (house overlapping environment[x,y] != []){
+					do kill_house_inhabitant(x,y);
+				}
+				else if(office overlapping environment[x,y] != []){
+					ask office overlapping environment[x,y]{do die;}
+				}
+				continue;
+			}
 			
 			//house detected
 			if blocks[j].type.id = 'House'{
@@ -254,6 +270,7 @@ global {
 					}	
 				}
 			}
+			
 			//office detected
 			if blocks[j].type.id = 'Office'{
 				if (house overlapping environment[x,y] = [] and office overlapping environment[x,y] = [] and empty_building overlapping environment[x,y] = []){
@@ -261,7 +278,7 @@ global {
 				}
 				else{	
 					if(house overlapping environment[x,y] != []){
-						ask house overlapping environment[x,y]{do die;}
+						do kill_house_inhabitant(x,y);
 						do build_office(x,y);
 					}
 					if(empty_building overlapping environment[x,y] != []){
@@ -270,6 +287,7 @@ global {
 					}	
 				}
 			}
+			
 			//empty building detected
 			if blocks[j].type.id = 'Empty building'{
 				if (house overlapping environment[x,y] = [] and office overlapping environment[x,y] = [] and empty_building overlapping environment[x,y] = []){
@@ -281,7 +299,7 @@ global {
 						do build_empty_building(x,y);
 					}
 					if(house overlapping environment[x,y] != []){
-						ask house overlapping environment[x,y]{do die;}
+						do kill_house_inhabitant(x,y);
 						do build_empty_building(x,y);
 					}	
 				}

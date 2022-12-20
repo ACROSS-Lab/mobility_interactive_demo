@@ -41,12 +41,6 @@ global{
 			//write 'traffic'+ nb_people_on_road/i.shape.perimeter;
 		}
 	}
-	
-	
-
-	reflex info{
-//		write current_date.hour;
-	}
 
 	reflex update_office_location{
 			ask inhabitant{
@@ -68,10 +62,6 @@ global{
 			}
 			
 		}
-	}
-	
-	action create_house{
-		
 	}
 	
 	action mouse_click{
@@ -104,14 +94,8 @@ global{
 					create office{
 						color <- #orange;
 						location <- myself.location;
-						shape <- myself.shape;
-						loop i over: inhabitant{
-//							if i.office_location = nil{
-//								ask world {do update_office_location;}
-//							}
-						}	
-					}
-					
+						shape <- myself.shape;	
+					}		
 				do die;
 				}
 			}
@@ -137,14 +121,14 @@ species inhabitant skills:[moving]{
 	point office_location <- nil;
 	point house_location <- nil;
 	point target <- nil;
-	float speed <- 0.1;
+//	float speed <- 0.1;
 	aspect default{
-		draw circle(4) color: #red;
+		draw circle(10) color: rnd_color(225);
 	}
 
 	reflex choose_target{		
 		if(current_date.hour >= 7 and current_date.hour <= 17){
-			target <- office_location;// any_location_in(one_of(available_office));
+			target <- office_location;
 		}
 		else{
 			target <- house_location;			
@@ -168,7 +152,6 @@ species road{
 
 species empty_building{
 	rgb color;
-	
 	aspect default{
 		draw shape color:color;
 	}
