@@ -14,9 +14,10 @@ global {
 	webcam webcam1 <- webcam(1);
 	int image_width <- 480;
 	int image_height <- 270; 
-	map<string,rgb> colors <- ["Empty building":: #lightgray, "House":: #yellow, "Office" :: #orange];
+	float step <- 1 #sec;
+//	int cycle_duration <- 5 #sec;
+	map<string,rgb> colors <- ["Empty building":: #gray, "House":: #blue, "Office" :: #yellow];
 	image_file image_file_test <- image_file("../includes/images.jpg");
-
 
 	geometry shape <- rectangle(1920, 1080);
 
@@ -25,7 +26,7 @@ global {
 	float tolerance_BW <- 1.2 min: 1.0 max: 2.0 step: 0.1 parameter: true;
 	
 	//allow to increase the constrast of the image
-	float coeff_constrast <- 1.0 min: 1.0 max:3.0 step: 0.1 parameter: true;
+	float coeff_constrast <- 2.0 min: 1.0 max:3.0 step: 0.1 parameter: true;
 	
 	//define the low threshold for the detection of block
 	float low_threhold_block_detection <- 0.1 min: 0.0 max:0.5 step: 0.1 parameter: true;
@@ -37,13 +38,15 @@ global {
 	bool improve_image <- false parameter: true;
 	
 	//possibility to save all the images produced for debugging puropose
-	bool save_image <- false parameter: true;
+	bool save_image <- true parameter: true;
 
 	
 	list<point> distorsion_points <- [{487.9398496240601,92.40641711229948,0.0},{1426.2857142857142,63.529411764705884,0.0},{1504.2406015037593,1056.8983957219252,0.0},{453.29323308270676,1068.4491978609626,0.0}];
-	list<point> bounds_points <- [{668.4972170686457,466.4175824175824,0.0},{736.1781076066791,525.7582417582418,0.0}];
-	list<point> blacksubblock_points <-[{537.8849721706865,469.978021978022,0.0},{569.9443413729128,497.2747252747253,0.0}];
-	list<point> whitesubblock_points <-[{699.3692022263451,331.1208791208791,0.0},{731.4285714285714,360.7912087912088,0.0}];
+	list<point> bounds_points <- [{732.0353982300885,580.340760157274,0.0},{795.7522123893805,645.4521625163827,0.0}];
+	list<point> blacksubblock_points <-[{1239.9615014436959,73.9093242087254,0.0},{1275.0721847930702,96.08212147134302,0.0}];
+//	[{864.334071496362,450.1012373453318,0.0},{892.8819993672889,478.0427446569179,0.0}];
+	list<point> whitesubblock_points <- [{734.9725952148438,458.17071533203125,0.0},{758.6580200195312,481.857666015625,0.0}];
+//	[{770.1866497943689,453.1383577052868,0.0},{795.0901613413478,479.86501687289086,0.0}];
 	
 	string current_mode <- "";
 	list<pattern> patterns; 
@@ -163,7 +166,7 @@ global {
 			shape <- environment[x,y].shape - 2;
 			location <- (environment[x,y].shape).location;
 			color <- colors['House']; 	
-			create inhabitant number: 10{
+			create inhabitant number: 40{
 				location <- any_location_in(environment[x,y].shape);
 				house_location <- location;
 				office_location <- not empty(available_office) ? any_location_in(one_of(available_office)) : nil;
@@ -242,6 +245,7 @@ global {
 			int x <- j/8;
 			int y <- j mod 8;
 			
+			
 			if (blocks[j].type = nil or blocks[j].type.id = nil){
 				if (house overlapping environment[x,y] != []){
 					do kill_house_inhabitant(x,y);
@@ -249,8 +253,12 @@ global {
 				else if(office overlapping environment[x,y] != []){
 					ask office overlapping environment[x,y]{do die;}
 				}
+				else if(empty_building overlapping environment[x,y] != []){
+					ask empty_building overlapping environment[x,y] {do die;}
+				}
 				continue;
 			}
+		
 			
 			//house detected
 			if blocks[j].type.id = 'House'{
@@ -296,7 +304,7 @@ global {
 				else{	
 					if(office overlapping environment[x,y] != []){
 						ask office overlapping environment[x,y]{do die;}
-						do build_empty_building(x,y);
+						do build_empty_building;
 					}
 					if(house overlapping environment[x,y] != []){
 						do kill_house_inhabitant(x,y);
@@ -304,6 +312,7 @@ global {
 					}	
 				}
 			}
+			write 'number people: ' + length(inhabitant);
 		}
 		
 		//validation of the code - if there is an error (pattern not detected, or wrong pattern detected), display a square around the falty blocks
@@ -342,7 +351,8 @@ species cell
 experiment analyseImage type: gui {
 	/** Insert here the definition of the input and output of the model */
 	output {
-		display image_display type:java2D {
+		display image_display type:opengl axes: false 
+		{
 			overlay position: { 5, 5 } size: { 800 #px, 180 #px } background: # black transparency: 0.4 border: #black rounded: true
             {
             	draw "current action: " + current_mode at: { 50#px,  30#px } color: # white font: font("Helvetica", 30, #bold);
@@ -354,6 +364,9 @@ experiment analyseImage type: gui {
             	
             }
 			image "tmp.jpg" refresh:true;
+//			graphics "image" {
+//				draw rectangle(world.shape.width, world.shape.height * 9/16) texture: "tmp.jpg";
+//			}
 			species cell position: {0,0,0.01};
 			event "p" action: define_distorsions_points;
 			event "d" action: define_code;
@@ -396,7 +409,9 @@ experiment analyseImage type: gui {
 		}
 	
 	
-		display main_display type:opengl{
+		display main_display type:opengl axes:false
+		keystone: [{0,0.0,0.0},{0,1.8,0.0},{1.0,1.8,0.0},{1.0,0.0,0.0}]
+		{
 			//grid environment border: #black;
 			species empty_building aspect: default;
 			species road aspect: default;

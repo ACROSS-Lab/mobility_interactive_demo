@@ -10,7 +10,6 @@ model GridModel
 
 /* Insert your model definition here */
 global{
-	int nb_people <- 20;
 	float step <- 10 #mn;
 	list available_office <- [];
 	graph road_network;
@@ -20,17 +19,22 @@ global{
 		road_network <- as_edge_graph(road);
 	}
 
+	reflex write_info{
+//		write 'time: ' + current_date.hour;
+	}
+
 	//when a road is busy, it turns into yellow & inhabitant's speed decreases
 	reflex update_road{
 //		map<road,float> weights_map <- road as_map (each::(count(inhabitant overlapping each)) / each.shape.perimeter));
 //		road_network <- as_edge_graph(road) with_weight weights_map;
 		loop i over: road{
 			int nb_people_on_road <- length(inhabitant overlapping i);
-			if(nb_people_on_road/i.shape.perimeter >= 0.65){
+			if(nb_people_on_road/i.shape.perimeter >= 0.2){
+				write 'traffic jam';
 				ask i{
-					color <- #yellow;
+					color <- #red;
 					ask inhabitant overlapping i{
-						speed <- speed * 0.05;
+						speed <- speed * 0.02;
 					}
 				}
 			}else{
@@ -43,12 +47,12 @@ global{
 	}
 
 	reflex update_office_location{
-			ask inhabitant{
-				if ( office none_matches (each overlaps location)) {
-					if (available_office none_matches (each overlaps office_location) ) {
-						office_location <- not empty(available_office) ? any_location_in(one_of(available_office))  : house_location;					
-					}										
-				}
+		ask inhabitant{
+			if ( office none_matches (each overlaps location)) {
+				if (available_office none_matches (each overlaps office_location) ) {
+					office_location <- not empty(available_office) ? any_location_in(one_of(available_office))  : house_location;					
+				}										
+			}
 		}
 	}
 
@@ -59,8 +63,7 @@ global{
 			}
 			if((i in available_office) and (length(inhabitant overlapping i) >= 20)){
 				available_office <- available_office - i;
-			}
-			
+			}	
 		}
 	}
 	
@@ -73,7 +76,7 @@ global{
 				location <- selected_cell.location;
 				color <- #blue;
 				shape <- selected_cell.shape;
-				create inhabitant number: rnd(nb_people){
+				create inhabitant number: 20{
 						location <- any_location_in((selected_cell).shape);
 						house_location <- location;
 						office_location <- not empty(available_office) ? any_location_in(one_of(available_office)) : nil;
@@ -121,9 +124,15 @@ species inhabitant skills:[moving]{
 	point office_location <- nil;
 	point house_location <- nil;
 	point target <- nil;
-//	float speed <- 0.1;
+	rgb color;
+	
+	init {
+		color <- rnd_color(225);
+		
+	}
+
 	aspect default{
-		draw circle(10) color: rnd_color(225);
+		draw circle(10) color: color;
 	}
 
 	reflex choose_target{		
@@ -136,7 +145,7 @@ species inhabitant skills:[moving]{
 	}
 	
 	reflex moving when: target != nil{
-		do goto target:target on:road_network speed:0.01;
+		do goto target:target on:road_network speed:speed;
 		if (location = target){
 			target <-  nil;
 		}
@@ -170,7 +179,7 @@ grid environment height:8 width:8 neighbors:4{
 
 experiment grid_model type:gui{
 	output{
-		display main_display type:opengl{
+		display main_display type:opengl {
 			//grid environment border: #black;
 			species empty_building aspect: default;
 			species road aspect: default;
