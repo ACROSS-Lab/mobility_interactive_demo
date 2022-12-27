@@ -202,6 +202,16 @@ global {
 		}
 	}
 	
+	action update_office_location(int x, int y){
+		loop i over: inhabitant{
+			if i.office_location overlaps environment[x,y].shape{
+				ask i {
+					office_location <- not empty(available_office) ? any_location_in(one_of(available_office))  : house_location;					
+				}										
+			}
+		}
+	}
+	
 	action define_code {
 		current_mode <- "Detection of the codes of the blocks";
 		write "Detection of the codes of the blocks";
@@ -251,7 +261,9 @@ global {
 					do kill_house_inhabitant(x,y);
 				}
 				else if(office overlapping environment[x,y] != []){
+					do update_office_location(x,y);
 					ask office overlapping environment[x,y]{do die;}
+					
 				}
 				else if(empty_building overlapping environment[x,y] != []){
 					ask empty_building overlapping environment[x,y] {do die;}
@@ -269,6 +281,7 @@ global {
 				else{
 					//in case there's a office/ empty_building, kill it before building the house 
 					if(office overlapping environment[x,y] != []){
+						do update_office_location(x,y);
 						ask office overlapping environment[x,y]{do die;}
 						do build_house(x,y);
 					}
@@ -303,6 +316,7 @@ global {
 				}
 				else{	
 					if(office overlapping environment[x,y] != []){
+						do update_office_location(x,y);
 						ask office overlapping environment[x,y]{do die;}
 						do build_empty_building;
 					}
