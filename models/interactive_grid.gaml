@@ -199,7 +199,7 @@ global {
 		int count_house <- 0;
 		int count_office <- 0;
 		loop j from: 0 to: 63{		
-			int x <- j/8;
+			int x <- int(j/8);
 			int y <- j mod 8;
 			if (blocks[j].type = nil  or blocks[j].type.id = nil){
 				continue;				

@@ -20,7 +20,7 @@ global {
 	list<point> whitesubblock_points <-[{699.3692022263451,331.1208791208791,0.0},{731.4285714285714,360.7912087912088,0.0}];
 	
 	action create_agents {
-		matrix mat <- cam_shot(nil, image_width,image_height, webcam(1));
+		matrix mat <- cam_shot(webcam1, image_width::image_height);
 		create webcam_analyser {
 			do run_thread interval: 2#s;
 		}
@@ -28,7 +28,7 @@ global {
 	webcam webcam1 <- webcam(1);
 	
 	reflex capture_webcam {
-		matrix mat <- field(cam_shot(nil, image_width, image_height, webcam1));
+		matrix mat <- cam_shot(webcam1, image_width::image_height);
 		ask cell_image {
 			color <- rgb(mat[grid_x,grid_y]);		
 		}
@@ -54,10 +54,11 @@ species webcam_analyser skills: [thread] {
 		geometry white_subblock <- length(whitesubblock_points) = 2 ? polygon([whitesubblock_points[0],{whitesubblock_points[1].x, whitesubblock_points[0].y},whitesubblock_points[1],{whitesubblock_points[0].x, whitesubblock_points[1].y} ]): nil;
 		geometry bounds_g <- length(bounds_points) = 2 ? polygon([bounds_points[0],{bounds_points[1].x, bounds_points[0].y},bounds_points[1],{bounds_points[0].x, bounds_points[1].y} ]): nil;
 		
-		//detecting the code
+		//detecting the code 
 		list<block> blocks <- detect_blocks(
 			webcam1, //webcam used for the image analysis
-			image_width, image_height, //webcam image resolution
+			image_width::image_height, //webcam image resolution
+			false,false,
 			patterns, //list of patterns to detect
 			distorsion_points, //list of 4 detection points (top-left, top-right, bottom-right, bottom-left)
 			  8,8, //size of the grid (columns, rows)

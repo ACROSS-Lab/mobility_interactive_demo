@@ -10,8 +10,10 @@ model webcam
 
 import "Grid Model.gaml"
 
-global {
-	webcam webcam1 <- webcam(1);
+global skills: [thread] {
+	matrix img; 
+	
+	webcam webcam1 <- webcam(0);
 	int image_width <- 480;
 	int image_height <- 270; 
 	float step <- 1 #sec;
@@ -38,7 +40,7 @@ global {
 	bool improve_image <- false parameter: true;
 	
 	//possibility to save all the images produced for debugging puropose
-	bool save_image <- true parameter: true;
+	bool save_image <- false parameter: true;
 
 	
 	list<point> distorsion_points <- [{487.9398496240601,92.40641711229948,0.0},{1426.2857142857142,63.529411764705884,0.0},{1504.2406015037593,1056.8983957219252,0.0},{453.29323308270676,1068.4491978609626,0.0}];
@@ -71,6 +73,8 @@ global {
 		float h <- pt1.y - pt0.y;
 
 		do create_agents;
+		do end_thread;
+		do run_thread interval: 10 #ms;
 	
 	}
 	
@@ -225,7 +229,8 @@ global {
 		//detecting the code
 		list<block> blocks <- detect_blocks(
 			webcam1, //image from which detecting the block code
-			image_width, image_height,
+			image_width::image_height,
+			true,false,
 			patterns, //list of patterns to detect
 			distorsion_points, //list of 4 detection points (top-left, top-right, bottom-right, bottom-left)
 			  8,8, //size of the grid (columns, rows)
@@ -252,7 +257,7 @@ global {
 		}
 		
 		loop j from: 0 to: 63{
-			int x <- j/8;
+			int x <- int(j/8);
 			int y <- j mod 8;
 			
 			
@@ -342,10 +347,24 @@ global {
 		write "Number of errors: " + (cell count each.error);
 	}
 	
-	reflex refresh_households when:cycle mod 100 = 0{
-		let c <- cam_shot("tmp.jpg", image_width, image_height, webcam1);
+	/*reflex refresh_households when:cycle mod 100 = 0{
+		let c <- cam_shot(webcam1,image_width::image_height);
 		do define_code;
+	}*/
+	
+	reflex refresh_webcam {
+		img <- cam_shot(webcam1,image_width::image_height, false, false);
+		write img;
+		
 	}
+	
+	action thread_action {
+		do define_code;
+		ask experiment {
+			do update_outputs(true);
+		}
+	}
+	
 }
 
 species cell 
@@ -377,11 +396,11 @@ experiment analyseImage type: gui {
             	draw "'g': define the bound of block" at: { 50#px,  140#px } color: # white font: font("Helvetica", 20, #bold);
             	
             }
-			image "tmp.jpg" refresh:true;
+			image matrix:img;
 //			graphics "image" {
 //				draw rectangle(world.shape.width, world.shape.height * 9/16) texture: "tmp.jpg";
 //			}
-			species cell position: {0,0,0.01};
+			//species cell position: {0,0,0.01};
 			event "p" action: define_distorsions_points;
 			event "d" action: define_code;
 			event "b" action: define_black_subblock;
